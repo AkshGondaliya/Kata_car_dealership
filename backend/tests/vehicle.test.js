@@ -215,3 +215,52 @@ describe("GET /api/vehicles/search", () => {
     });
 
 });
+
+describe("POST /api/vehicles/:id/purchase", () => {
+
+    test("should purchase vehicle successfully", async () => {
+
+        // Register customer
+        await request(app)
+            .post("/api/auth/register")
+            .send({
+                name: "Aksh",
+                email: "aksh@gmail.com",
+                password: "Password123"
+            });
+
+        // Login customer
+        const loginResponse = await request(app)
+            .post("/api/auth/login")
+            .send({
+                email: "aksh@gmail.com",
+                password: "Password123"
+            });
+
+        const token = loginResponse.body.token;
+
+        // Create vehicle directly
+        const vehicle = await Vehicle.create({
+            make: "Toyota",
+            model: "Fortuner",
+            category: "SUV",
+            price: 4500000,
+            quantity: 5
+        });
+
+        // Purchase vehicle
+        const response = await request(app)
+            .post(`/api/vehicles/${vehicle._id}/purchase`)
+            .set("Authorization", `Bearer ${token}`);
+
+        expect(response.statusCode).toBe(200);
+
+        expect(response.body.success).toBe(true);
+
+        expect(response.body.message).toBe("Vehicle purchased successfully");
+
+        expect(response.body.vehicle.quantity).toBe(4);
+
+    });
+
+});
