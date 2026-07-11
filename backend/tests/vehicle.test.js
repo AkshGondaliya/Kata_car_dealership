@@ -3,27 +3,46 @@ const app = require("../app");
 const Vehicle = require("../models/Vehicle");
 describe("POST /api/vehicles", () => {
 
-  test("should create a new vehicle", async () => {
+    test("should create a new vehicle", async () => {
 
-    const response = await request(app)
-      .post("/api/vehicles")
-      .send({
-        make: "Toyota",
-        model: "Fortuner",
-        category: "SUV",
-        price: 4500000,
-        quantity: 10
-      });
+        await request(app)
+            .post("/api/auth/register")
+            .send({
+                name: "Admin",
+                email: "admin@gmail.com",
+                password: "Password123",
+                role: "ADMIN"
+            });
 
-    expect(response.statusCode).toBe(201);
+        const login = await request(app)
+            .post("/api/auth/login")
+            .send({
+                email: "admin@gmail.com",
+                password: "Password123"
+            });
 
-    expect(response.body.success).toBe(true);
+        const token = login.body.token;
 
-    expect(response.body.vehicle.make).toBe("Toyota");
+        const response = await request(app)
+            .post("/api/vehicles")
+            .set("Authorization", `Bearer ${token}`)
+            .send({
+                make: "Toyota",
+                model: "Fortuner",
+                category: "SUV",
+                price: 4500000,
+                quantity: 10
+            });
 
-    expect(response.body.vehicle.model).toBe("Fortuner");
+        expect(response.statusCode).toBe(201);
 
-  });
+        expect(response.body.success).toBe(true);
+
+        expect(response.body.vehicle.make).toBe("Toyota");
+
+        expect(response.body.vehicle.model).toBe("Fortuner");
+
+    });
 
 });
 
@@ -39,7 +58,14 @@ describe("PUT /api/vehicles/:id", () => {
             price: 4500000,
             quantity: 10
         });
-
+        await request(app)
+            .post("/api/auth/register")
+            .send({
+                name: "Admin",
+                email: "admin@gmail.com",
+                password: "Password123",
+                role: "ADMIN"
+            });
         // Login as admin first and get token
         const loginResponse = await request(app)
             .post("/api/auth/login")
