@@ -235,10 +235,56 @@ const searchVehicles = async (req, res) => {
 
 };
 
+const purchaseVehicle = async (req, res) => {
+
+    try {
+
+        const { id } = req.params;
+
+        const vehicle = await Vehicle.findById(id);
+
+        if (!vehicle) {
+            return res.status(404).json({
+                success: false,
+                message: "Vehicle not found"
+            });
+        }
+
+        if (vehicle.quantity <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Vehicle is out of stock"
+            });
+        }
+
+        vehicle.quantity -= 1;
+
+        await vehicle.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Vehicle purchased successfully",
+            vehicle
+        });
+
+    } catch (error) {
+
+        console.log(error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error"
+        });
+
+    }
+
+};
+
 module.exports = {
   addVehicle,
   getAllVehicles,
   updateVehicle,
   deleteVehicle,
-  searchVehicles
+  searchVehicles,
+  purchaseVehicle
 };
