@@ -114,6 +114,15 @@ describe("DELETE /api/vehicles/:id", () => {
             quantity: 10
         });
 
+        await request(app)
+            .post("/api/auth/register")
+            .send({
+                name: "Admin",
+                email: "admin@gmail.com",
+                password: "Password123",
+                role: "ADMIN"
+            });
+
         // Login as Admin
         const loginResponse = await request(app)
             .post("/api/auth/login")
