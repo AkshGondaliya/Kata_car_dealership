@@ -264,3 +264,56 @@ describe("POST /api/vehicles/:id/purchase", () => {
     });
 
 });
+
+describe("POST /api/vehicles/:id/restock", () => {
+
+    test("should restock vehicle successfully", async () => {
+
+        // Register Admin
+        await request(app)
+            .post("/api/auth/register")
+            .send({
+                name: "Admin",
+                email: "admin@gmail.com",
+                password: "Password123",
+                role: "ADMIN"
+            });
+
+        // Login Admin
+        const loginResponse = await request(app)
+            .post("/api/auth/login")
+            .send({
+                email: "admin@gmail.com",
+                password: "Password123"
+            });
+
+        const token = loginResponse.body.token;
+
+        // Create Vehicle
+        const vehicle = await Vehicle.create({
+            make: "Toyota",
+            model: "Fortuner",
+            category: "SUV",
+            price: 4500000,
+            quantity: 5
+        });
+
+        // Restock
+        const response = await request(app)
+            .post(`/api/vehicles/${vehicle._id}/restock`)
+            .set("Authorization", `Bearer ${token}`)
+            .send({
+                quantity: 10
+            });
+
+        expect(response.statusCode).toBe(200);
+
+        expect(response.body.success).toBe(true);
+
+        expect(response.body.message).toBe("Vehicle restocked successfully");
+
+        expect(response.body.vehicle.quantity).toBe(15);
+
+    });
+
+});
