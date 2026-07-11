@@ -14,4 +14,5 @@ app.use(morgan("dev"));
 
 app.use("/api/auth", authRoutes);
 
+
 module.exports = app;
