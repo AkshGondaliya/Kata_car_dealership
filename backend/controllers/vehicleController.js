@@ -163,9 +163,82 @@ const deleteVehicle = async (req, res) => {
 
 };
 
+const searchVehicles = async (req, res) => {
+
+    try {
+
+        const {
+            make,
+            model,
+            category,
+            minPrice,
+            maxPrice
+        } = req.query;
+
+        let filter = {};
+
+        if (make) {
+            filter.make = {
+                $regex: make,
+                $options: "i"
+            };
+        }
+
+        if (model) {
+            filter.model = {
+                $regex: model,
+                $options: "i"
+            };
+        }
+
+        if (category) {
+            filter.category = {
+                $regex: category,
+                $options: "i"
+            };
+        }
+
+        if (minPrice || maxPrice) {
+
+            filter.price = {};
+
+            if (minPrice) {
+                filter.price.$gte = Number(minPrice);
+            }
+
+            if (maxPrice) {
+                filter.price.$lte = Number(maxPrice);
+            }
+
+        }
+
+        const vehicles = await Vehicle.find(filter).sort({
+            createdAt: -1
+        });
+
+        return res.status(200).json({
+            success: true,
+            count: vehicles.length,
+            vehicles
+        });
+
+    } catch (error) {
+
+        console.log(error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error"
+        });
+
+    }
+
+};
+
 module.exports = {
   addVehicle,
   getAllVehicles,
   updateVehicle,
-  deleteVehicle
+  deleteVehicle,
+  searchVehicles
 };

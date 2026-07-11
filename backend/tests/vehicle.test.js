@@ -182,6 +182,14 @@ describe("GET /api/vehicles/search", () => {
             }
         ]);
 
+        await request(app)
+            .post("/api/auth/register")
+            .send({
+                name: "Aksh",
+                email: "aksh@gmail.com",
+                password: "Password123"
+            });
+
         // Login as authenticated user
         const loginResponse = await request(app)
             .post("/api/auth/login")
