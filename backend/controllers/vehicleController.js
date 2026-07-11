@@ -279,12 +279,58 @@ const purchaseVehicle = async (req, res) => {
     }
 
 };
+const restockVehicle = async (req, res) => {
 
+    try {
+
+        const { id } = req.params;
+
+        const { quantity } = req.body;
+
+        if (quantity === undefined || quantity <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Quantity must be greater than zero"
+            });
+        }
+
+        const vehicle = await Vehicle.findById(id);
+
+        if (!vehicle) {
+            return res.status(404).json({
+                success: false,
+                message: "Vehicle not found"
+            });
+        }
+
+        vehicle.quantity += Number(quantity);
+
+        await vehicle.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Vehicle restocked successfully",
+            vehicle
+        });
+
+    } catch (error) {
+
+        console.log(error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error"
+        });
+
+    }
+
+};
 module.exports = {
   addVehicle,
   getAllVehicles,
   updateVehicle,
   deleteVehicle,
   searchVehicles,
-  purchaseVehicle
+  purchaseVehicle,
+  restockVehicle
 };

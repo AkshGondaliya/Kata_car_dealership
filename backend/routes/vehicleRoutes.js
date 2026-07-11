@@ -2,7 +2,7 @@ const express = require("express");
 
 const router = express.Router();
 
-const { addVehicle, getAllVehicles, updateVehicle,deleteVehicle,searchVehicles,purchaseVehicle} = require("../controllers/vehicleController");
+const { addVehicle, getAllVehicles, updateVehicle,deleteVehicle,searchVehicles,purchaseVehicle,restockVehicle} = require("../controllers/vehicleController");
 const { authenticate, isAdmin } = require("../middleware/authMiddleware");
 
 router.post("/",authenticate, isAdmin, addVehicle);
@@ -22,5 +22,6 @@ router.get(
 router.post(
     "/:id/purchase",authenticate,purchaseVehicle
 );
+router.post("/:id/restock",authenticate, isAdmin, restockVehicle);
 
 module.exports = router;
