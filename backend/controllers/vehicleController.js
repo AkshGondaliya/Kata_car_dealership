@@ -52,6 +52,33 @@ const addVehicle = async (req, res) => {
   }
 };
 
+
+// Existing addVehicle()
+
+const getAllVehicles = async (req, res) => {
+  try {
+
+    const vehicles = await Vehicle.find().sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      count: vehicles.length,
+      vehicles,
+    });
+
+  } catch (error) {
+
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+
+  }
+};
+
 module.exports = {
   addVehicle,
+  getAllVehicles,
 };
