@@ -1,0 +1,20 @@
+# Dependencies
+backend/node_modules
+frontend/node_modules
+
+# Environment Variables
+backend/.env
+backend/.env.test
+
+# Coverage
+coverage
+
+# Logs
+*.log
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# VS Code (Optional)
+.vscode/settings.json
