@@ -100,3 +100,46 @@ describe("PUT /api/vehicles/:id", () => {
     });
 
 });
+
+describe("DELETE /api/vehicles/:id", () => {
+
+    test("should delete vehicle successfully", async () => {
+
+        // Create a vehicle
+        const vehicle = await Vehicle.create({
+            make: "Toyota",
+            model: "Fortuner",
+            category: "SUV",
+            price: 4500000,
+            quantity: 10
+        });
+
+        // Login as Admin
+        const loginResponse = await request(app)
+            .post("/api/auth/login")
+            .send({
+                email: "admin@gmail.com",
+                password: "Password123"
+            });
+
+        const token = loginResponse.body.token;
+
+        // Delete vehicle
+        const response = await request(app)
+            .delete(`/api/vehicles/${vehicle._id}`)
+            .set("Authorization", `Bearer ${token}`);
+
+        expect(response.statusCode).toBe(200);
+
+        expect(response.body.success).toBe(true);
+
+        expect(response.body.message).toBe("Vehicle deleted successfully");
+
+        // Verify vehicle is removed from database
+        const deletedVehicle = await Vehicle.findById(vehicle._id);
+
+        expect(deletedVehicle).toBeNull();
+
+    });
+
+});
