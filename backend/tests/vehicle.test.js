@@ -152,3 +152,58 @@ describe("DELETE /api/vehicles/:id", () => {
     });
 
 });
+
+describe("GET /api/vehicles/search", () => {
+
+    test("should return vehicles matching search criteria", async () => {
+
+        // Create vehicles
+        await Vehicle.create([
+            {
+                make: "Toyota",
+                model: "Fortuner",
+                category: "SUV",
+                price: 4500000,
+                quantity: 10
+            },
+            {
+                make: "BMW",
+                model: "X5",
+                category: "SUV",
+                price: 8500000,
+                quantity: 5
+            },
+            {
+                make: "Honda",
+                model: "City",
+                category: "Sedan",
+                price: 1500000,
+                quantity: 8
+            }
+        ]);
+
+        // Login as authenticated user
+        const loginResponse = await request(app)
+            .post("/api/auth/login")
+            .send({
+                email: "aksh@gmail.com",
+                password: "Password123"
+            });
+
+        const token = loginResponse.body.token;
+
+        const response = await request(app)
+            .get("/api/vehicles/search?make=Toyota")
+            .set("Authorization", `Bearer ${token}`);
+
+        expect(response.statusCode).toBe(200);
+
+        expect(response.body.success).toBe(true);
+
+        expect(response.body.count).toBe(1);
+
+        expect(response.body.vehicles[0].make).toBe("Toyota");
+
+    });
+
+});
