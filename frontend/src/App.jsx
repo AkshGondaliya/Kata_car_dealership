@@ -401,6 +401,24 @@ function App() {
     }
   }
 
+  const handlePurchaseVehicle = async (vehicleId) => {
+    setCustomerMessage('')
+    setCustomerBusy(true)
+
+    try {
+      await axios.post(`${API_BASE_URL}/api/vehicles/${vehicleId}/purchase`, {}, authHeaders())
+      await resetSearch()
+      window.alert('Vehicle purchased successfully.')
+      setCustomerMessage('Vehicle purchased successfully.')
+    } catch (requestError) {
+      setCustomerMessage(
+        requestError?.response?.data?.message ?? 'Unable to purchase the vehicle right now.',
+      )
+    } finally {
+      setCustomerBusy(false)
+    }
+  }
+
   const handleVehicleSubmit = async (event) => {
     event.preventDefault()
     setAdminMessage('')
@@ -827,7 +845,16 @@ function App() {
                     </span>
                   </div>
 
-                  <div className="vehicle-actions" />
+                  <div className="vehicle-actions">
+                    <button
+                      type="button"
+                      className="primary-btn"
+                      disabled={customerBusy || Number(vehicle.quantity) <= 0}
+                      onClick={() => handlePurchaseVehicle(vehicle._id)}
+                    >
+                      {Number(vehicle.quantity) <= 0 ? 'Out of stock' : 'Purchase vehicle'}
+                    </button>
+                  </div>
                 </article>
               ))
             ) : (
