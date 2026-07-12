@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import axios from 'axios'
 import heroImage from './assets/hero.png'
 
@@ -20,25 +20,123 @@ const PORTALS = [
 ]
 
 const initialForm = {
+  name: '',
   email: '',
   password: '',
 }
 
+const initialVehicleForm = {
+  make: '',
+  model: '',
+  category: '',
+  price: '',
+  quantity: '',
+}
+
 function App() {
   const [portal, setPortal] = useState('CUSTOMER')
+  const [mode, setMode] = useState('login')
+  const [view, setView] = useState('auth')
   const [form, setForm] = useState(initialForm)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(null)
+  const [session, setSession] = useState(() => {
+    const token = localStorage.getItem('authToken')
+    const userRaw = localStorage.getItem('authUser')
+    const role = localStorage.getItem('authRole')
+
+    if (!token) {
+      return null
+    }
+
+    let user = null
+
+    try {
+      user = userRaw ? JSON.parse(userRaw) : null
+    } catch {
+      user = null
+    }
+
+    return { token, user, role: role ? role.toUpperCase() : '' }
+  })
+  const [vehicles, setVehicles] = useState([])
+  const [adminBusy, setAdminBusy] = useState(false)
+  const [adminMessage, setAdminMessage] = useState('')
+  const [vehicleForm, setVehicleForm] = useState(initialVehicleForm)
+  const [editingVehicleId, setEditingVehicleId] = useState('')
+  const [restockForm, setRestockForm] = useState({ vehicleId: '', quantity: '' })
 
   const activePortal = useMemo(
     () => PORTALS.find((item) => item.key === portal) ?? PORTALS[0],
     [portal],
   )
 
+  useEffect(() => {
+    if (session?.role === 'ADMIN') {
+      setView('admin')
+      setSuccess(null)
+    }
+  }, [session])
+
+  useEffect(() => {
+    if (view !== 'admin' || !session?.token) {
+      return
+    }
+
+    const loadVehicles = async () => {
+      setAdminBusy(true)
+      setAdminMessage('')
+
+      try {
+        const response = await axios.get(`${API_BASE_URL}/api/vehicles`, {
+          headers: {
+            Authorization: `Bearer ${session.token}`,
+          },
+        })
+
+        setVehicles(response.data?.vehicles ?? [])
+      } catch (requestError) {
+        setAdminMessage(
+          requestError?.response?.data?.message ?? 'Unable to load vehicles right now.',
+        )
+      } finally {
+        setAdminBusy(false)
+      }
+    }
+
+    loadVehicles()
+  }, [view, session])
+
+  const authHeaders = () => ({
+    headers: {
+      Authorization: `Bearer ${session?.token ?? ''}`,
+    },
+  })
+
   const handleChange = (event) => {
     const { name, value } = event.target
     setForm((current) => ({ ...current, [name]: value }))
+  }
+
+  const handleVehicleChange = (event) => {
+    const { name, value } = event.target
+    setVehicleForm((current) => ({ ...current, [name]: value }))
+  }
+
+  const handleRestockChange = (event) => {
+    const { name, value } = event.target
+    setRestockForm((current) => ({ ...current, [name]: value }))
+  }
+
+  const resetVehicleForm = () => {
+    setVehicleForm(initialVehicleForm)
+    setEditingVehicleId('')
+  }
+
+  const refreshVehicles = async () => {
+    const response = await axios.get(`${API_BASE_URL}/api/vehicles`, authHeaders())
+    setVehicles(response.data?.vehicles ?? [])
   }
 
   const handleSubmit = async (event) => {
@@ -47,10 +145,31 @@ function App() {
     setLoading(true)
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/auth/login`, {
-        email: form.email.trim(),
-        password: form.password,
-      })
+      const endpoint = mode === 'register' ? '/api/auth/register' : '/api/auth/login'
+      const payload =
+        mode === 'register'
+          ? {
+              name: form.name.trim(),
+              email: form.email.trim(),
+              password: form.password,
+              role: 'CUSTOMER',
+            }
+          : {
+              email: form.email.trim(),
+              password: form.password,
+            }
+
+      const response = await axios.post(`${API_BASE_URL}${endpoint}`, payload)
+
+      if (mode === 'register') {
+        setSuccess({
+          name: response.data?.user?.name ?? form.name.trim(),
+          email: response.data?.user?.email ?? form.email.trim(),
+          role: 'CUSTOMER',
+        })
+        setForm(initialForm)
+        return
+      }
 
       const { token, user } = response.data
       const normalizedRole = String(user?.role ?? '').toUpperCase()
@@ -59,19 +178,25 @@ function App() {
         setError(
           `This account is registered as ${normalizedRole.toLowerCase()}. Switch to the matching portal to continue.`,
         )
-        setLoading(false)
         return
       }
 
       localStorage.setItem('authToken', token)
       localStorage.setItem('authUser', JSON.stringify(user))
       localStorage.setItem('authRole', normalizedRole || portal)
+      setSession({ token, user, role: normalizedRole || portal })
 
-      setSuccess({
-        name: user?.name ?? 'User',
-        email: user?.email ?? form.email.trim(),
-        role: normalizedRole || portal,
-      })
+      if (normalizedRole === 'ADMIN') {
+        setView('admin')
+        setAdminMessage('')
+      } else {
+        setSuccess({
+          name: user?.name ?? 'User',
+          email: user?.email ?? form.email.trim(),
+          role: normalizedRole || portal,
+        })
+      }
+
       setForm(initialForm)
     } catch (requestError) {
       const message =
@@ -87,9 +212,323 @@ function App() {
     localStorage.removeItem('authToken')
     localStorage.removeItem('authUser')
     localStorage.removeItem('authRole')
+    setSession(null)
+    setView('auth')
     setSuccess(null)
     setForm(initialForm)
     setError('')
+    setVehicles([])
+    setVehicleForm(initialVehicleForm)
+    setEditingVehicleId('')
+    setRestockForm({ vehicleId: '', quantity: '' })
+    setAdminMessage('')
+  }
+
+  const toggleMode = () => {
+    setMode((current) => (current === 'login' ? 'register' : 'login'))
+    setError('')
+    setForm(initialForm)
+  }
+
+  const handleVehicleSubmit = async (event) => {
+    event.preventDefault()
+    setAdminMessage('')
+    setAdminBusy(true)
+
+    try {
+      const payload = {
+        make: vehicleForm.make.trim(),
+        model: vehicleForm.model.trim(),
+        category: vehicleForm.category.trim(),
+        price: Number(vehicleForm.price),
+        quantity: Number(vehicleForm.quantity),
+      }
+
+      if (editingVehicleId) {
+        await axios.put(`${API_BASE_URL}/api/vehicles/${editingVehicleId}`, payload, authHeaders())
+        setAdminMessage('Vehicle updated successfully.')
+      } else {
+        await axios.post(`${API_BASE_URL}/api/vehicles`, payload, authHeaders())
+        setAdminMessage('Vehicle added successfully.')
+      }
+
+      await refreshVehicles()
+      resetVehicleForm()
+    } catch (requestError) {
+      setAdminMessage(
+        requestError?.response?.data?.message ?? 'Unable to save the vehicle right now.',
+      )
+    } finally {
+      setAdminBusy(false)
+    }
+  }
+
+  const handleEditVehicle = (vehicle) => {
+    setEditingVehicleId(vehicle._id)
+    setVehicleForm({
+      make: vehicle.make ?? '',
+      model: vehicle.model ?? '',
+      category: vehicle.category ?? '',
+      price: vehicle.price ?? '',
+      quantity: vehicle.quantity ?? '',
+    })
+    setAdminMessage('Editing vehicle details.')
+  }
+
+  const handleDeleteVehicle = async (vehicleId) => {
+    if (!window.confirm('Delete this vehicle?')) {
+      return
+    }
+
+    setAdminBusy(true)
+    setAdminMessage('')
+
+    try {
+      await axios.delete(`${API_BASE_URL}/api/vehicles/${vehicleId}`, authHeaders())
+      await refreshVehicles()
+      setAdminMessage('Vehicle deleted successfully.')
+    } catch (requestError) {
+      setAdminMessage(
+        requestError?.response?.data?.message ?? 'Unable to delete the vehicle right now.',
+      )
+    } finally {
+      setAdminBusy(false)
+    }
+  }
+
+  const handleRestockVehicle = async (event) => {
+    event.preventDefault()
+    setAdminBusy(true)
+    setAdminMessage('')
+
+    try {
+      await axios.post(
+        `${API_BASE_URL}/api/vehicles/${restockForm.vehicleId}/restock`,
+        { quantity: Number(restockForm.quantity) },
+        authHeaders(),
+      )
+      await refreshVehicles()
+      setRestockForm({ vehicleId: '', quantity: '' })
+      setAdminMessage('Vehicle restocked successfully.')
+    } catch (requestError) {
+      setAdminMessage(
+        requestError?.response?.data?.message ?? 'Unable to restock the vehicle right now.',
+      )
+    } finally {
+      setAdminBusy(false)
+    }
+  }
+
+  if (view === 'admin') {
+    return (
+      <main className="admin-shell">
+        <section className="admin-topbar">
+          <div>
+            <span className="section-label">Admin Home</span>
+            <h1>Vehicle management</h1>
+            <p>Add, update, delete, and restock vehicles from one dashboard.</p>
+          </div>
+          <div className="admin-actions">
+            <div className="session-chip">
+              {session?.user?.name ?? 'Admin'} · {String(session?.role ?? 'ADMIN').toLowerCase()}
+            </div>
+            <button type="button" className="secondary-btn" onClick={handleLogout}>
+              Sign out
+            </button>
+          </div>
+        </section>
+
+        <section className="admin-grid">
+          <form className="admin-card admin-form" onSubmit={handleVehicleSubmit}>
+            <div className="card-heading">
+              <h2>{editingVehicleId ? 'Update vehicle' : 'Add vehicle'}</h2>
+              <p>Use the same form to create a new record or edit an existing one.</p>
+            </div>
+
+            <div className="form-grid">
+              <label>
+                Make
+                <input
+                  type="text"
+                  name="make"
+                  value={vehicleForm.make}
+                  onChange={handleVehicleChange}
+                  placeholder="Toyota"
+                  required
+                />
+              </label>
+              <label>
+                Model
+                <input
+                  type="text"
+                  name="model"
+                  value={vehicleForm.model}
+                  onChange={handleVehicleChange}
+                  placeholder="Corolla"
+                  required
+                />
+              </label>
+              <label>
+                Category
+                <input
+                  type="text"
+                  name="category"
+                  value={vehicleForm.category}
+                  onChange={handleVehicleChange}
+                  placeholder="Sedan"
+                  required
+                />
+              </label>
+              <label>
+                Price
+                <input
+                  type="number"
+                  name="price"
+                  min="0"
+                  value={vehicleForm.price}
+                  onChange={handleVehicleChange}
+                  placeholder="25000"
+                  required
+                />
+              </label>
+              <label>
+                Quantity
+                <input
+                  type="number"
+                  name="quantity"
+                  min="0"
+                  value={vehicleForm.quantity}
+                  onChange={handleVehicleChange}
+                  placeholder="10"
+                  required
+                />
+              </label>
+            </div>
+
+            <div className="button-row">
+              <button className="primary-btn" type="submit" disabled={adminBusy}>
+                {editingVehicleId ? 'Update vehicle' : 'Add vehicle'}
+              </button>
+              <button type="button" className="secondary-btn" onClick={resetVehicleForm}>
+                Clear form
+              </button>
+            </div>
+          </form>
+
+          <div className="admin-card admin-form">
+            <div className="card-heading">
+              <h2>Restock vehicle</h2>
+              <p>Select a vehicle and add stock in bulk.</p>
+            </div>
+
+            <form className="stacked-form" onSubmit={handleRestockVehicle}>
+              <label>
+                Vehicle
+                <select
+                  name="vehicleId"
+                  value={restockForm.vehicleId}
+                  onChange={handleRestockChange}
+                  required
+                >
+                  <option value="">Choose vehicle</option>
+                  {vehicles.map((vehicle) => (
+                    <option key={vehicle._id} value={vehicle._id}>
+                      {vehicle.make} {vehicle.model}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Quantity to add
+                <input
+                  type="number"
+                  name="quantity"
+                  min="1"
+                  value={restockForm.quantity}
+                  onChange={handleRestockChange}
+                  placeholder="5"
+                  required
+                />
+              </label>
+              <button className="primary-btn" type="submit" disabled={adminBusy}>
+                Restock vehicle
+              </button>
+            </form>
+
+            {adminMessage ? <div className="admin-message">{adminMessage}</div> : null}
+          </div>
+        </section>
+
+        <section className="admin-card inventory-card">
+          <div className="card-heading inventory-heading">
+            <div>
+              <h2>Inventory</h2>
+              <p>{adminBusy && vehicles.length === 0 ? 'Loading vehicles...' : 'Manage the current fleet.'}</p>
+            </div>
+            <button type="button" className="secondary-btn" onClick={refreshVehicles} disabled={adminBusy}>
+              Refresh
+            </button>
+          </div>
+
+          <div className="inventory-table-wrap">
+            <table className="inventory-table">
+              <thead>
+                <tr>
+                  <th>Vehicle</th>
+                  <th>Category</th>
+                  <th>Price</th>
+                  <th>Stock</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {vehicles.length > 0 ? (
+                  vehicles.map((vehicle) => (
+                    <tr key={vehicle._id}>
+                      <td>
+                        <strong>
+                          {vehicle.make} {vehicle.model}
+                        </strong>
+                      </td>
+                      <td>{vehicle.category}</td>
+                      <td>${Number(vehicle.price).toLocaleString()}</td>
+                      <td>{vehicle.quantity}</td>
+                      <td>
+                        <div className="row-actions">
+                          <button type="button" className="secondary-btn small-btn" onClick={() => handleEditVehicle(vehicle)}>
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            className="secondary-btn small-btn"
+                            onClick={() => setRestockForm({ vehicleId: vehicle._id, quantity: '' })}
+                          >
+                            Restock
+                          </button>
+                          <button
+                            type="button"
+                            className="danger-btn small-btn"
+                            onClick={() => handleDeleteVehicle(vehicle._id)}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="5" className="empty-state">
+                      {adminBusy ? 'Loading vehicles...' : 'No vehicles found yet.'}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    )
   }
 
   return (
@@ -118,8 +557,12 @@ function App() {
         <div className="auth-panel">
           <div className="panel-header">
             <span className="section-label">Kata Car</span>
-            <h2>Welcome back</h2>
-            <p>Sign in with the right portal for your account.</p>
+            <h2>{mode === 'login' ? 'Welcome back' : 'Create your account'}</h2>
+            <p>
+              {mode === 'login'
+                ? 'Sign in with the right portal for your account.'
+                : 'Register a customer account to start booking right away.'}
+            </p>
           </div>
 
           <div className="portal-switch" role="tablist" aria-label="Login portal">
@@ -152,6 +595,21 @@ function App() {
             </div>
           ) : (
             <form className="auth-form" onSubmit={handleSubmit}>
+              {mode === 'register' ? (
+                <label>
+                  Full name
+                  <input
+                    type="text"
+                    name="name"
+                    placeholder="Your full name"
+                    value={form.name}
+                    onChange={handleChange}
+                    autoComplete="name"
+                    required
+                  />
+                </label>
+              ) : null}
+
               <label>
                 Email address
                 <input
@@ -191,12 +649,23 @@ function App() {
               {error ? <div className="error-box">{error}</div> : null}
 
               <button className="primary-btn" type="submit" disabled={loading}>
-                {loading ? 'Signing in...' : `Continue as ${activePortal.label}`}
+                {loading
+                  ? mode === 'register'
+                    ? 'Creating account...'
+                    : 'Signing in...'
+                  : mode === 'register'
+                    ? 'Create user account'
+                    : `Continue as ${activePortal.label}`}
+              </button>
+
+              <button type="button" className="secondary-btn" onClick={toggleMode}>
+                {mode === 'register' ? 'Back to login' : 'Register user'}
               </button>
 
               <p className="fine-print">
-                By continuing, you agree to use the app only from the portal that matches your
-                account role.
+                {mode === 'register'
+                  ? 'Admin accounts are kept separate from public registration.'
+                  : 'By continuing, you agree to use the app only from the portal that matches your account role.'}
               </p>
             </form>
           )}

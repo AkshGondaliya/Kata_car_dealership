@@ -228,6 +228,10 @@ button {
   gap: 16px;
 }
 
+.auth-form .secondary-btn {
+  margin-top: -4px;
+}
+
 .auth-form label {
   display: grid;
   gap: 10px;
@@ -352,6 +356,195 @@ button {
   text-align: center;
 }
 
+.admin-shell {
+  min-height: 100vh;
+  padding: 24px;
+  display: grid;
+  gap: 20px;
+}
+
+.admin-topbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 28px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 28px;
+  background: rgba(8, 12, 22, 0.72);
+  backdrop-filter: blur(22px);
+}
+
+.admin-topbar h1 {
+  margin: 8px 0 4px;
+  font-size: clamp(2rem, 4vw, 3.2rem);
+}
+
+.admin-topbar p {
+  margin: 0;
+  color: rgba(244, 239, 233, 0.74);
+}
+
+.admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.session-chip {
+  padding: 12px 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f8d7b0;
+  font-size: 0.92rem;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: 1.08fr 0.92fr;
+  gap: 20px;
+}
+
+.admin-card {
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(8, 12, 22, 0.72);
+  backdrop-filter: blur(22px);
+  padding: 24px;
+}
+
+.card-heading {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.card-heading h2,
+.inventory-heading h2 {
+  margin: 0;
+}
+
+.card-heading p,
+.inventory-heading p {
+  margin: 0;
+  color: rgba(244, 239, 233, 0.72);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.form-grid label,
+.stacked-form label {
+  display: grid;
+  gap: 10px;
+  color: rgba(244, 239, 233, 0.92);
+}
+
+.form-grid input,
+.stacked-form input,
+.stacked-form select {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: rgba(8, 12, 22, 0.85);
+  color: #f4efe9;
+  padding: 15px 16px;
+  outline: none;
+}
+
+.button-row {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.stacked-form {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-message {
+  margin-top: 16px;
+  border-radius: 16px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(244, 239, 233, 0.88);
+}
+
+.inventory-card {
+  padding: 24px;
+}
+
+.inventory-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.inventory-table-wrap {
+  overflow-x: auto;
+}
+
+.inventory-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+.inventory-table th,
+.inventory-table td {
+  padding: 16px 14px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  vertical-align: middle;
+}
+
+.inventory-table th {
+  color: rgba(244, 239, 233, 0.68);
+  font-size: 0.86rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.inventory-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.row-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.small-btn {
+  min-height: 40px;
+  padding-inline: 14px;
+  width: auto;
+}
+
+.danger-btn {
+  border: 0;
+  border-radius: 16px;
+  min-height: 40px;
+  padding: 0 14px;
+  font-weight: 700;
+  color: #fff1f1;
+  background: rgba(255, 107, 107, 0.22);
+}
+
+.empty-state {
+  text-align: center;
+  color: rgba(244, 239, 233, 0.7);
+}
+
 @media (max-width: 960px) {
   .auth-card {
     grid-template-columns: 1fr;
@@ -370,6 +563,18 @@ button {
   .auth-visual,
   .auth-panel {
     padding: 24px;
+  }
+
+  .admin-topbar,
+  .admin-grid,
+  .form-grid,
+  .button-row {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-topbar {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .feature-grid,
