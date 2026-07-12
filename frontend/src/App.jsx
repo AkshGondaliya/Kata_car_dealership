@@ -62,7 +62,9 @@ function App() {
   })
   const [vehicles, setVehicles] = useState([])
   const [adminBusy, setAdminBusy] = useState(false)
+  const [customerBusy, setCustomerBusy] = useState(false)
   const [adminMessage, setAdminMessage] = useState('')
+  const [customerMessage, setCustomerMessage] = useState('')
   const [vehicleForm, setVehicleForm] = useState(initialVehicleForm)
   const [editingVehicleId, setEditingVehicleId] = useState('')
   const [restockForm, setRestockForm] = useState({ vehicleId: '', quantity: '' })
@@ -76,32 +78,44 @@ function App() {
     if (session?.role === 'ADMIN') {
       setView('admin')
       setSuccess(null)
+    } else if (session?.role === 'CUSTOMER') {
+      setView('user')
+      setSuccess(null)
     }
   }, [session])
 
   useEffect(() => {
-    if (view !== 'admin' || !session?.token) {
+    if (view !== 'admin' && view !== 'user') {
       return
     }
 
     const loadVehicles = async () => {
-      setAdminBusy(true)
-      setAdminMessage('')
+      if (view === 'admin') {
+        setAdminBusy(true)
+        setAdminMessage('')
+      } else {
+        setCustomerBusy(true)
+        setCustomerMessage('')
+      }
 
       try {
-        const response = await axios.get(`${API_BASE_URL}/api/vehicles`, {
-          headers: {
-            Authorization: `Bearer ${session.token}`,
-          },
-        })
+        const response = await axios.get(`${API_BASE_URL}/api/vehicles`)
 
         setVehicles(response.data?.vehicles ?? [])
       } catch (requestError) {
-        setAdminMessage(
-          requestError?.response?.data?.message ?? 'Unable to load vehicles right now.',
-        )
+        const message = requestError?.response?.data?.message ?? 'Unable to load vehicles right now.'
+
+        if (view === 'admin') {
+          setAdminMessage(message)
+        } else {
+          setCustomerMessage(message)
+        }
       } finally {
-        setAdminBusy(false)
+        if (view === 'admin') {
+          setAdminBusy(false)
+        } else {
+          setCustomerBusy(false)
+        }
       }
     }
 
@@ -190,6 +204,7 @@ function App() {
         setView('admin')
         setAdminMessage('')
       } else {
+        setView('user')
         setSuccess({
           name: user?.name ?? 'User',
           email: user?.email ?? form.email.trim(),
@@ -222,6 +237,8 @@ function App() {
     setEditingVehicleId('')
     setRestockForm({ vehicleId: '', quantity: '' })
     setAdminMessage('')
+    setCustomerMessage('')
+    setCustomerBusy(false)
   }
 
   const toggleMode = () => {
@@ -525,6 +542,78 @@ function App() {
                 )}
               </tbody>
             </table>
+          </div>
+        </section>
+      </main>
+    )
+  }
+
+  if (view === 'user') {
+    return (
+      <main className="user-shell">
+        <section className="user-topbar">
+          <div>
+            <span className="section-label">User Home</span>
+            <h1>Available vehicles</h1>
+            <p>Browse the current fleet after login and choose what works for your trip.</p>
+          </div>
+          <div className="admin-actions">
+            <div className="session-chip">
+              {session?.user?.name ?? 'User'} · {String(session?.role ?? 'CUSTOMER').toLowerCase()}
+            </div>
+            <button type="button" className="secondary-btn" onClick={handleLogout}>
+              Sign out
+            </button>
+          </div>
+        </section>
+
+        <section className="user-card">
+          <div className="card-heading inventory-heading">
+            <div>
+              <h2>Fleet catalog</h2>
+              <p>
+                {customerBusy && vehicles.length === 0
+                  ? 'Loading vehicles...'
+                  : 'All vehicles from the current inventory are listed below.'}
+              </p>
+            </div>
+            <button type="button" className="secondary-btn" onClick={refreshVehicles} disabled={customerBusy}>
+              Refresh
+            </button>
+          </div>
+
+          {customerMessage ? <div className="admin-message">{customerMessage}</div> : null}
+
+          <div className="vehicle-grid">
+            {vehicles.length > 0 ? (
+              vehicles.map((vehicle) => (
+                <article key={vehicle._id} className="vehicle-card">
+                  <div className="vehicle-card-header">
+                    <div>
+                      <span className="vehicle-tag">{vehicle.category}</span>
+                      <h3>
+                        {vehicle.make} {vehicle.model}
+                      </h3>
+                    </div>
+                    <strong className="vehicle-price">${Number(vehicle.price).toLocaleString()}</strong>
+                  </div>
+
+                  <div className="vehicle-meta">
+                    <span>
+                      <b>Stock:</b> {vehicle.quantity}
+                    </span>
+                    <span>
+                      <b>Category:</b> {vehicle.category}
+                    </span>
+                  </div>
+
+                  <div className="vehicle-actions">
+                  </div>
+                </article>
+              ))
+            ) : (
+              <div className="empty-state vehicle-empty">{customerBusy ? 'Loading vehicles...' : 'No vehicles found yet.'}</div>
+            )}
           </div>
         </section>
       </main>

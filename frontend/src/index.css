@@ -415,6 +415,108 @@ button {
   padding: 24px;
 }
 
+.user-shell {
+  min-height: 100vh;
+  padding: 24px;
+  display: grid;
+  gap: 20px;
+}
+
+.user-topbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 28px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 28px;
+  background: rgba(8, 12, 22, 0.72);
+  backdrop-filter: blur(22px);
+}
+
+.user-topbar h1 {
+  margin: 8px 0 4px;
+  font-size: clamp(2rem, 4vw, 3.2rem);
+}
+
+.user-topbar p {
+  margin: 0;
+  color: rgba(244, 239, 233, 0.74);
+}
+
+.user-card {
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(8, 12, 22, 0.72);
+  backdrop-filter: blur(22px);
+  padding: 24px;
+}
+
+.vehicle-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.vehicle-card {
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
+  padding: 20px;
+  display: grid;
+  gap: 16px;
+}
+
+.vehicle-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.vehicle-tag {
+  display: inline-flex;
+  margin-bottom: 10px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8d7b0;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.vehicle-card h3 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.vehicle-price {
+  white-space: nowrap;
+  color: #ffd08a;
+}
+
+.vehicle-meta {
+  display: grid;
+  gap: 8px;
+  color: rgba(244, 239, 233, 0.78);
+}
+
+.vehicle-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.vehicle-actions .primary-btn,
+.vehicle-actions .secondary-btn {
+  min-height: 44px;
+}
+
+.vehicle-empty {
+  grid-column: 1 / -1;
+}
+
 .card-heading {
   display: grid;
   gap: 8px;
@@ -566,13 +668,16 @@ button {
   }
 
   .admin-topbar,
+  .user-topbar,
   .admin-grid,
   .form-grid,
-  .button-row {
+  .button-row,
+  .vehicle-grid {
     grid-template-columns: 1fr;
   }
 
-  .admin-topbar {
+  .admin-topbar,
+  .user-topbar {
     align-items: flex-start;
     flex-direction: column;
   }
@@ -585,5 +690,9 @@ button {
   .form-meta {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .vehicle-actions {
+    grid-template-columns: 1fr;
   }
 }
