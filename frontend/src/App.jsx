@@ -33,6 +33,73 @@ const initialVehicleForm = {
   quantity: '',
 }
 
+const initialSearchForm = {
+  make: '',
+  model: '',
+  category: '',
+  minPrice: '',
+  maxPrice: '',
+}
+
+const normalizeText = (value) =>
+  String(value ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+
+const levenshteinDistance = (left, right) => {
+  const source = normalizeText(left)
+  const target = normalizeText(right)
+
+  if (source === target) {
+    return 0
+  }
+
+  if (!source.length) {
+    return target.length
+  }
+
+  if (!target.length) {
+    return source.length
+  }
+
+  const previousRow = Array.from({ length: target.length + 1 }, (_, index) => index)
+
+  for (let sourceIndex = 1; sourceIndex <= source.length; sourceIndex += 1) {
+    const currentRow = [sourceIndex]
+
+    for (let targetIndex = 1; targetIndex <= target.length; targetIndex += 1) {
+      const substitutionCost = source[sourceIndex - 1] === target[targetIndex - 1] ? 0 : 1
+      currentRow[targetIndex] = Math.min(
+        previousRow[targetIndex] + 1,
+        currentRow[targetIndex - 1] + 1,
+        previousRow[targetIndex - 1] + substitutionCost,
+      )
+    }
+
+    previousRow.splice(0, previousRow.length, ...currentRow)
+  }
+
+  return previousRow[target.length]
+}
+
+const matchesSearchTerm = (value, term) => {
+  const normalizedValue = normalizeText(value)
+  const normalizedTerm = normalizeText(term)
+
+  if (!normalizedTerm) {
+    return true
+  }
+
+  if (normalizedValue.includes(normalizedTerm)) {
+    return true
+  }
+
+  const valueWords = normalizedValue.split(' ').filter(Boolean)
+
+  return valueWords.some((word) => levenshteinDistance(word, normalizedTerm) <= 2)
+}
+
 function App() {
   const [portal, setPortal] = useState('CUSTOMER')
   const [mode, setMode] = useState('login')
@@ -65,6 +132,7 @@ function App() {
   const [customerBusy, setCustomerBusy] = useState(false)
   const [adminMessage, setAdminMessage] = useState('')
   const [customerMessage, setCustomerMessage] = useState('')
+  const [searchForm, setSearchForm] = useState(initialSearchForm)
   const [vehicleForm, setVehicleForm] = useState(initialVehicleForm)
   const [editingVehicleId, setEditingVehicleId] = useState('')
   const [restockForm, setRestockForm] = useState({ vehicleId: '', quantity: '' })
@@ -143,6 +211,11 @@ function App() {
     setRestockForm((current) => ({ ...current, [name]: value }))
   }
 
+  const handleSearchChange = (event) => {
+    const { name, value } = event.target
+    setSearchForm((current) => ({ ...current, [name]: value }))
+  }
+
   const resetVehicleForm = () => {
     setVehicleForm(initialVehicleForm)
     setEditingVehicleId('')
@@ -151,6 +224,23 @@ function App() {
   const refreshVehicles = async () => {
     const response = await axios.get(`${API_BASE_URL}/api/vehicles`, authHeaders())
     setVehicles(response.data?.vehicles ?? [])
+  }
+
+  const resetSearch = async () => {
+    setSearchForm(initialSearchForm)
+    setCustomerMessage('')
+    setCustomerBusy(true)
+
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/vehicles`, authHeaders())
+      setVehicles(response.data?.vehicles ?? [])
+    } catch (requestError) {
+      setCustomerMessage(
+        requestError?.response?.data?.message ?? 'Unable to reload the full inventory right now.',
+      )
+    } finally {
+      setCustomerBusy(false)
+    }
   }
 
   const handleSubmit = async (event) => {
@@ -236,6 +326,7 @@ function App() {
     setVehicleForm(initialVehicleForm)
     setEditingVehicleId('')
     setRestockForm({ vehicleId: '', quantity: '' })
+    setSearchForm(initialSearchForm)
     setAdminMessage('')
     setCustomerMessage('')
     setCustomerBusy(false)
@@ -245,6 +336,69 @@ function App() {
     setMode((current) => (current === 'login' ? 'register' : 'login'))
     setError('')
     setForm(initialForm)
+  }
+
+  const handleVehicleSearch = async (event) => {
+    event.preventDefault()
+    setCustomerMessage('')
+    setCustomerBusy(true)
+
+    try {
+      const params = {}
+
+      if (searchForm.make.trim()) params.make = searchForm.make.trim()
+      if (searchForm.model.trim()) params.model = searchForm.model.trim()
+      if (searchForm.category.trim()) params.category = searchForm.category.trim()
+      if (searchForm.minPrice.trim()) params.minPrice = searchForm.minPrice.trim()
+      if (searchForm.maxPrice.trim()) params.maxPrice = searchForm.maxPrice.trim()
+
+      const response = await axios.get(`${API_BASE_URL}/api/vehicles/search`, {
+        params,
+        ...authHeaders(),
+      })
+
+      const apiResults = response.data?.vehicles ?? []
+
+      if (apiResults.length > 0) {
+        setVehicles(apiResults)
+        setCustomerMessage(`Found ${apiResults.length} matching vehicle(s).`)
+        return
+      }
+
+      const fallbackResponse = await axios.get(`${API_BASE_URL}/api/vehicles`, authHeaders())
+      const allVehicles = fallbackResponse.data?.vehicles ?? []
+      const searchText = `${searchForm.make} ${searchForm.model} ${searchForm.category}`.trim()
+
+      const fallbackResults = allVehicles.filter((vehicle) => {
+        const price = Number(vehicle.price)
+        const minPrice = searchForm.minPrice.trim() ? Number(searchForm.minPrice) : null
+        const maxPrice = searchForm.maxPrice.trim() ? Number(searchForm.maxPrice) : null
+
+        const priceMatches =
+          (minPrice === null || price >= minPrice) && (maxPrice === null || price <= maxPrice)
+
+        const textMatches =
+          matchesSearchTerm(vehicle.make, searchForm.make) &&
+          matchesSearchTerm(vehicle.model, searchForm.model) &&
+          matchesSearchTerm(vehicle.category, searchForm.category) &&
+          matchesSearchTerm(`${vehicle.make} ${vehicle.model} ${vehicle.category}`, searchText)
+
+        return priceMatches && textMatches
+      })
+
+      setVehicles(fallbackResults)
+      setCustomerMessage(
+        fallbackResults.length
+          ? `Found ${fallbackResults.length} matching vehicle(s).`
+          : 'No vehicles matched your search.',
+      )
+    } catch (requestError) {
+      setCustomerMessage(
+        requestError?.response?.data?.message ?? 'Unable to search vehicles right now.',
+      )
+    } finally {
+      setCustomerBusy(false)
+    }
   }
 
   const handleVehicleSubmit = async (event) => {
@@ -577,10 +731,76 @@ function App() {
                   : 'All vehicles from the current inventory are listed below.'}
               </p>
             </div>
-            <button type="button" className="secondary-btn" onClick={refreshVehicles} disabled={customerBusy}>
-              Refresh
-            </button>
           </div>
+
+          <form className="search-panel" onSubmit={handleVehicleSearch}>
+            <div className="search-grid">
+              <label>
+                Make
+                <input
+                  type="text"
+                  name="make"
+                  placeholder="Toyota"
+                  value={searchForm.make}
+                  onChange={handleSearchChange}
+                />
+              </label>
+              <label>
+                Model
+                <input
+                  type="text"
+                  name="model"
+                  placeholder="Corolla"
+                  value={searchForm.model}
+                  onChange={handleSearchChange}
+                />
+              </label>
+              <label>
+                Category
+                <input
+                  type="text"
+                  name="category"
+                  placeholder="Sedan"
+                  value={searchForm.category}
+                  onChange={handleSearchChange}
+                />
+              </label>
+              <label>
+                Min price
+                <input
+                  type="number"
+                  name="minPrice"
+                  min="0"
+                  placeholder="10000"
+                  value={searchForm.minPrice}
+                  onChange={handleSearchChange}
+                />
+              </label>
+              <label>
+                Max price
+                <input
+                  type="number"
+                  name="maxPrice"
+                  min="0"
+                  placeholder="50000"
+                  value={searchForm.maxPrice}
+                  onChange={handleSearchChange}
+                />
+              </label>
+            </div>
+
+            <div className="search-actions">
+              <button type="submit" className="primary-btn" disabled={customerBusy}>
+                Search vehicles
+              </button>
+              <button type="button" className="secondary-btn" onClick={resetSearch} disabled={customerBusy}>
+                Clear search
+              </button>
+              <button type="button" className="secondary-btn" onClick={refreshVehicles} disabled={customerBusy}>
+                Refresh all
+              </button>
+            </div>
+          </form>
 
           {customerMessage ? <div className="admin-message">{customerMessage}</div> : null}
 
@@ -607,8 +827,7 @@ function App() {
                     </span>
                   </div>
 
-                  <div className="vehicle-actions">
-                  </div>
+                  <div className="vehicle-actions" />
                 </article>
               ))
             ) : (

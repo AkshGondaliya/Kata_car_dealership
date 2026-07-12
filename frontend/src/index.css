@@ -502,6 +502,51 @@ button {
   color: rgba(244, 239, 233, 0.78);
 }
 
+.search-panel {
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 20px;
+  margin-bottom: 18px;
+  display: grid;
+  gap: 16px;
+}
+
+.search-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.search-grid label {
+  display: grid;
+  gap: 10px;
+  color: rgba(244, 239, 233, 0.92);
+  font-size: 0.92rem;
+}
+
+.search-grid input {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: rgba(8, 12, 22, 0.85);
+  color: #f4efe9;
+  padding: 14px 16px;
+  outline: none;
+}
+
+.search-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.search-actions .primary-btn,
+.search-actions .secondary-btn {
+  width: auto;
+  min-height: 46px;
+}
+
 .vehicle-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -684,6 +729,10 @@ button {
 
   .feature-grid,
   .portal-switch {
+    grid-template-columns: 1fr;
+  }
+
+  .search-grid {
     grid-template-columns: 1fr;
   }
 
